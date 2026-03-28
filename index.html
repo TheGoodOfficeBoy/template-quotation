@@ -379,13 +379,46 @@
   .sig-block { text-align: center; }
   .sig-label { font-size: 12px; color: var(--gray); margin-bottom: 4px; }
   .sig-company { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
-  .sig-logo-center {
-    width: 100px;
-    height: 70px;
-    object-fit: contain;
-    margin: 0 auto;
-    display: block;
+  .sig-stamp-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 130px;
   }
+  .stamp-label { font-size: 11px; color: var(--gray); }
+  .stamp-area {
+    width: 110px;
+    height: 110px;
+    border: 2px dashed var(--border);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--gray);
+    font-size: 11px;
+    text-align: center;
+    background: #fafafa;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .stamp-area:hover { border-color: var(--orange); background: var(--orange-pale); color: #0a2a1e; }
+  .stamp-area img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    position: absolute; top: 0; left: 0;
+    border-radius: 50%;
+  }
+  .stamp-area svg { pointer-events: none; }
+  .stamp-hint { font-size: 10px; color: #bbb; margin-top: 2px; }
+  .stamp-remove {
+    font-size: 10px; color: #dc2626; cursor: pointer; background: none; border: none;
+    font-family: 'Sarabun', sans-serif; display: none;
+  }
+  .stamp-remove:hover { text-decoration: underline; }
   .sig-line {
     border-top: 1.5px solid var(--dark);
     margin-top: 28px;
@@ -623,10 +656,20 @@
       </div>
     </div>
 
-    <div class="sig-block" style="text-align:center;">
-      <div class="sig-company" id="sig-center-name"></div>
-      <img id="sig-logo" class="sig-logo-center" style="display:none;" alt="Logo">
-      <div style="font-size:11px;color:var(--gray);margin-top:4px;" id="sig-company-name-bot"></div>
+    <div class="sig-stamp-block">
+      <div class="stamp-label">ตราประทับบริษัท</div>
+      <div class="stamp-area" id="stamp-area" onclick="document.getElementById('stamp-input').click()">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="13" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <circle cx="16" cy="16" r="8" stroke="#ccc" stroke-width="1"/>
+          <text x="16" y="15" text-anchor="middle" font-size="5" fill="#bbb" font-family="Sarabun,sans-serif">คลิกเพื่อ</text>
+          <text x="16" y="21" text-anchor="middle" font-size="5" fill="#bbb" font-family="Sarabun,sans-serif">อัปโหลด</text>
+        </svg>
+        <img id="stamp-img" src="" alt="ตราประทับ" style="display:none;">
+      </div>
+      <input type="file" id="stamp-input" accept="image/*" style="display:none" onchange="uploadStamp(event)">
+      <button class="stamp-remove" id="stamp-remove-btn" onclick="removeStamp()">✕ ลบตราประทับ</button>
+      <div class="stamp-hint">รองรับ PNG พื้นหลังโปร่งใส</div>
     </div>
 
     <div class="sig-block">
@@ -818,10 +861,41 @@ function showLogo(dataUrl) {
   const img = document.getElementById('logo-img');
   img.src = dataUrl;
   img.style.display = 'block';
-  // Sig logo
-  const sigLogo = document.getElementById('sig-logo');
-  sigLogo.src = dataUrl;
-  sigLogo.style.display = 'block';
+}
+
+// ====== STAMP ======
+function uploadStamp(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    showStamp(ev.target.result);
+    localStorage.setItem('qt_stamp', ev.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showStamp(dataUrl) {
+  const area = document.getElementById('stamp-area');
+  const img = document.getElementById('stamp-img');
+  img.src = dataUrl;
+  img.style.display = 'block';
+  // hide placeholder SVG
+  const svg = area.querySelector('svg');
+  if (svg) svg.style.display = 'none';
+  document.getElementById('stamp-remove-btn').style.display = 'inline-block';
+}
+
+function removeStamp() {
+  const area = document.getElementById('stamp-area');
+  const img = document.getElementById('stamp-img');
+  img.src = '';
+  img.style.display = 'none';
+  const svg = area.querySelector('svg');
+  if (svg) svg.style.display = '';
+  document.getElementById('stamp-remove-btn').style.display = 'none';
+  document.getElementById('stamp-input').value = '';
+  localStorage.removeItem('qt_stamp');
 }
 
 // ====== LOCALSTORAGE ======
@@ -933,7 +1007,6 @@ function clearCompany() {
   localStorage.removeItem('qt_logo');
   document.getElementById('logo-placeholder').style.display = 'flex';
   document.getElementById('logo-img').style.display = 'none';
-  document.getElementById('sig-logo').style.display = 'none';
 }
 
 // ====== AUTO SAVE ======
@@ -947,12 +1020,6 @@ function setupAutoSave() {
   DOC_KEYS.forEach(k => {
     const el = document.getElementById(k);
     if (el) el.addEventListener('input', saveDoc);
-  });
-  // Sig center names sync
-  document.getElementById('seller-name').addEventListener('input', function() {
-    document.getElementById('sig-center-name').textContent = this.value;
-    document.getElementById('sig-company-name-bot').textContent = this.value;
-    saveCompany();
   });
 }
 
@@ -990,10 +1057,9 @@ document.addEventListener('DOMContentLoaded', function() {
   setupAutoSave();
   loadCompany();
 
-  // Sync sig center
-  const sellerName = document.getElementById('seller-name').value;
-  document.getElementById('sig-center-name').textContent = sellerName;
-  document.getElementById('sig-company-name-bot').textContent = sellerName;
+  // Load stamp
+  const savedStamp = localStorage.getItem('qt_stamp');
+  if (savedStamp) showStamp(savedStamp);
 
   const hasDocData = localStorage.getItem('qt_doc_doc-no');
   if (hasDocData) {
