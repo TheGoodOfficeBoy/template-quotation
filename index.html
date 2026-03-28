@@ -528,7 +528,7 @@
   <button class="btn btn-outline" onclick="clearForm()">🗑 ล้างข้อมูลเอกสาร</button>
   <button class="btn btn-outline" onclick="clearCompany()">🏢 ล้างข้อมูลบริษัท</button>
   <button class="btn btn-outline" onclick="addRow()">➕ เพิ่มรายการ</button>
-  <button class="btn btn-orange" onclick="savePDF()">💾 บันทึก PDF</button>
+  <button class="btn btn-orange" onclick="savePDF()">💾 บันทึก / พิมพ์ PDF</button>
   <button class="btn btn-outline" onclick="window.print()">🖨 พิมพ์</button>
 </div>
 
@@ -1098,38 +1098,80 @@ function genDocNo() {
 
 // ====== SAVE PDF ======
 function savePDF() {
-  const noprint = document.querySelectorAll('.no-print');
-  noprint.forEach(el => el.style.display = 'none');
+  // Collect all styles from the current document
+  const styleSheets = Array.from(document.styleSheets).map(ss => {
+    try {
+      return Array.from(ss.cssRules).map(r => r.cssText).join('\n');
+    } catch(e) { return ''; }
+  }).join('\n');
 
-  // Temporarily constrain document width to A4 content width
+  // Clone the document content
   const docEl = document.getElementById('document');
-  const origStyle = docEl.getAttribute('style') || '';
-  docEl.style.width = '794px';
-  docEl.style.maxWidth = '794px';
-  docEl.style.margin = '0';
-  docEl.style.boxShadow = 'none';
-  docEl.style.borderRadius = '0';
+  const cloned = docEl.cloneNode(true);
 
-  const filename = (document.getElementById('doc-no').value || 'quotation') + '.pdf';
-  const opt = {
-    margin: [10, 10, 10, 10],
-    filename: filename,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      width: 794,
-      windowWidth: 794,
-      scrollY: 0
-    },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  // Remove no-print elements from clone
+  cloned.querySelectorAll('.no-print, .btn-del-row, #logo-input, #stamp-input, .logo-remove-btn, .stamp-remove, .stamp-hint, .logo-placeholder-text').forEach(el => el.remove());
+
+  // Build full HTML for iframe
+  const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; font-size: 13px; background: #fff; }
+  ${styleSheets}
+  @page { size: A4 portrait; margin: 10mm 12mm; }
+  body { margin: 0; padding: 0; }
+  #document {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+  }
+  .logo-box { border: none !important; background: transparent !important; }
+  .stamp-area { border: none !important; background: transparent !important; }
+  .editable, .cell-input, .field-input, .meta-input, .sig-name-input,
+  .sig-date-input, .notes-input, .cell-select {
+    border: none !important;
+    background: transparent !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .items-table thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .summary-table .highlight-row td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #document::before, #document::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+</style>
+</head>
+<body>
+${cloned.outerHTML}
+</body>
+</html>`;
+
+  // Create hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;';
+  document.body.appendChild(iframe);
+
+  const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+  iDoc.open();
+  iDoc.write(html);
+  iDoc.close();
+
+  // Wait for fonts to load then print
+  iframe.onload = function() {
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch(e) { window.print(); }
+      setTimeout(() => document.body.removeChild(iframe), 2000);
+    }, 800);
   };
-
-  html2pdf().set(opt).from(docEl).save().then(() => {
-    // Restore original styles
-    docEl.setAttribute('style', origStyle);
-    noprint.forEach(el => el.style.display = '');
-  });
 }
 
 // ====== NOTES LINE LIMIT ======
