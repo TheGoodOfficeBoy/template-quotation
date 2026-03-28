@@ -121,32 +121,66 @@
   }
   .logo-upload-wrapper {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     margin-bottom: 4px;
   }
-  .logo-img {
-    width: 100px;
-    height: 70px;
-    object-fit: contain;
-    cursor: pointer;
-  }
-  .logo-placeholder {
-    width: 100px;
-    height: 70px;
+  .logo-box {
+    position: relative;
+    min-width: 60px;
+    max-width: 180px;
+    min-height: 50px;
+    max-height: 130px;
     border: 2px dashed var(--border);
-    border-radius: 4px;
+    border-radius: 6px;
+    background: var(--gray-light);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
+    overflow: hidden;
+  }
+  .logo-box:hover { border-color: var(--orange); background: var(--orange-pale); }
+  .logo-box.has-image { border-style: solid; border-color: var(--border); background: transparent; }
+  .logo-box.has-image:hover { border-color: var(--orange); }
+  .logo-placeholder-text {
     color: var(--gray);
     font-size: 11px;
     text-align: center;
-    background: var(--gray-light);
-    transition: border-color 0.2s;
+    line-height: 1.5;
+    padding: 10px 12px;
+    pointer-events: none;
+    user-select: none;
   }
-  .logo-placeholder:hover { border-color: var(--orange); color: var(--orange); }
+  .logo-box.has-image .logo-placeholder-text { display: none; }
+  .logo-img {
+    display: none;
+    max-width: 176px;
+    max-height: 126px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    cursor: pointer;
+  }
+  .logo-box.has-image .logo-img { display: block; }
+  .logo-remove-btn {
+    display: none;
+    position: absolute;
+    top: 2px; right: 3px;
+    background: rgba(220,38,38,0.85);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 16px; height: 16px;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 2;
+  }
+  .logo-box.has-image .logo-remove-btn { display: block; }
   #logo-input { display: none; }
 
   .company-info { flex: 1; }
@@ -354,7 +388,16 @@
     font-weight: 700;
     font-size: 13px;
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
+  .notes-counter {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--gray);
+  }
+  .notes-counter.warn { color: #dc2626; }
   .notes-input {
     width: 100%;
     border: 1px dashed var(--border);
@@ -362,8 +405,10 @@
     padding: 6px 10px;
     font-family: 'Sarabun', sans-serif;
     font-size: 13px;
-    min-height: 40px;
-    resize: vertical;
+    line-height: 1.6;
+    height: calc(1.6em * 5 + 12px);
+    resize: none;
+    overflow-y: auto;
     outline: none;
     transition: border-color 0.2s;
   }
@@ -384,14 +429,14 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    min-width: 130px;
+    min-width: 140px;
   }
-  .stamp-label { font-size: 11px; color: var(--gray); }
+  .stamp-label { font-size: 11px; color: var(--gray); font-weight: 600; }
   .stamp-area {
-    width: 110px;
-    height: 110px;
+    width: 120px;
+    height: 120px;
     border: 2px dashed var(--border);
-    border-radius: 50%;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -410,7 +455,7 @@
     width: 100%; height: 100%;
     object-fit: contain;
     position: absolute; top: 0; left: 0;
-    border-radius: 50%;
+    border-radius: 6px;
   }
   .stamp-area svg { pointer-events: none; }
   .stamp-hint { font-size: 10px; color: #bbb; margin-top: 2px; }
@@ -460,9 +505,12 @@
   @media print {
     body { background: #fff; }
     .toolbar, .add-row-wrapper, .btn-del-row, #logo-input,
-    .logo-placeholder { display: none !important; }
+    .logo-placeholder-text, .logo-remove-btn, .stamp-remove, .stamp-hint,
+    #stamp-input { display: none !important; }
     .page-wrapper { margin: 0; padding: 0; max-width: 100%; }
-    #document { box-shadow: none; border-radius: 0; padding: 20px 24px; }
+    #document { box-shadow: none; border-radius: 0; padding: 16px 20px; width: 100%; }
+    .stamp-area { border: none !important; background: transparent !important; cursor: default; }
+    .logo-box { border: none !important; background: transparent !important; cursor: default; }
     .editable, .cell-input, .field-input, .meta-input, .sig-name-input,
     .sig-date-input, .notes-input, .cell-select {
       border: none !important; background: transparent !important;
@@ -493,10 +541,11 @@
     <!-- Left: Logo + Company -->
     <div class="logo-area">
       <div class="logo-upload-wrapper">
-        <div id="logo-placeholder" class="logo-placeholder" onclick="document.getElementById('logo-input').click()">
-          คลิกเพื่อ<br>อัปโหลดโลโก้
+        <div id="logo-box" class="logo-box" onclick="document.getElementById('logo-input').click()">
+          <span class="logo-placeholder-text">คลิกเพื่อ<br>อัปโหลดโลโก้</span>
+          <img id="logo-img" class="logo-img" alt="Logo">
+          <button class="logo-remove-btn" title="ลบโลโก้" onclick="event.stopPropagation(); removeLogo()">×</button>
         </div>
-        <img id="logo-img" class="logo-img" style="display:none;" onclick="document.getElementById('logo-input').click()" alt="Logo">
         <input type="file" id="logo-input" accept="image/*" onchange="uploadLogo(event)">
       </div>
       <div class="company-info">
@@ -640,8 +689,11 @@
 
   <!-- NOTES -->
   <div class="notes-section">
-    <div class="notes-label">หมายเหตุ</div>
-    <textarea class="notes-input" id="doc-notes" placeholder="หมายเหตุ : ..." rows="2"></textarea>
+    <div class="notes-label">
+      <span>หมายเหตุ</span>
+      <span class="notes-counter" id="notes-counter">0 / 5 บรรทัด</span>
+    </div>
+    <textarea class="notes-input" id="doc-notes" placeholder="หมายเหตุ : ..." rows="5" oninput="limitNoteLines(this)"></textarea>
   </div>
 
   <!-- SIGNATURES -->
@@ -659,11 +711,11 @@
     <div class="sig-stamp-block">
       <div class="stamp-label">ตราประทับบริษัท</div>
       <div class="stamp-area" id="stamp-area" onclick="document.getElementById('stamp-input').click()">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="16" cy="16" r="13" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3 2"/>
-          <circle cx="16" cy="16" r="8" stroke="#ccc" stroke-width="1"/>
-          <text x="16" y="15" text-anchor="middle" font-size="5" fill="#bbb" font-family="Sarabun,sans-serif">คลิกเพื่อ</text>
-          <text x="16" y="21" text-anchor="middle" font-size="5" fill="#bbb" font-family="Sarabun,sans-serif">อัปโหลด</text>
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="34" height="34" rx="4" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <rect x="8" y="8" width="24" height="24" rx="2" stroke="#ccc" stroke-width="1"/>
+          <text x="20" y="19" text-anchor="middle" font-size="5.5" fill="#bbb" font-family="Sarabun,sans-serif">คลิกเพื่อ</text>
+          <text x="20" y="26" text-anchor="middle" font-size="5.5" fill="#bbb" font-family="Sarabun,sans-serif">อัปโหลด</text>
         </svg>
         <img id="stamp-img" src="" alt="ตราประทับ" style="display:none;">
       </div>
@@ -857,10 +909,19 @@ function uploadLogo(e) {
 }
 
 function showLogo(dataUrl) {
-  document.getElementById('logo-placeholder').style.display = 'none';
+  const box = document.getElementById('logo-box');
   const img = document.getElementById('logo-img');
   img.src = dataUrl;
-  img.style.display = 'block';
+  box.classList.add('has-image');
+}
+
+function removeLogo() {
+  const box = document.getElementById('logo-box');
+  const img = document.getElementById('logo-img');
+  img.src = '';
+  box.classList.remove('has-image');
+  document.getElementById('logo-input').value = '';
+  localStorage.removeItem('qt_logo');
 }
 
 // ====== STAMP ======
@@ -1005,8 +1066,8 @@ function clearCompany() {
     localStorage.removeItem('qt_co_' + k);
   });
   localStorage.removeItem('qt_logo');
-  document.getElementById('logo-placeholder').style.display = 'flex';
-  document.getElementById('logo-img').style.display = 'none';
+  document.getElementById('logo-box').classList.remove('has-image');
+  document.getElementById('logo-img').src = '';
 }
 
 // ====== AUTO SAVE ======
@@ -1039,17 +1100,49 @@ function genDocNo() {
 function savePDF() {
   const noprint = document.querySelectorAll('.no-print');
   noprint.forEach(el => el.style.display = 'none');
-  const element = document.getElementById('document');
+
+  // Temporarily constrain document width to A4 content width
+  const docEl = document.getElementById('document');
+  const origStyle = docEl.getAttribute('style') || '';
+  docEl.style.width = '794px';
+  docEl.style.maxWidth = '794px';
+  docEl.style.margin = '0';
+  docEl.style.boxShadow = 'none';
+  docEl.style.borderRadius = '0';
+
+  const filename = (document.getElementById('doc-no').value || 'quotation') + '.pdf';
   const opt = {
-    margin: [8, 8, 8, 8],
-    filename: (document.getElementById('doc-no').value || 'quotation') + '.pdf',
+    margin: [10, 10, 10, 10],
+    filename: filename,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      width: 794,
+      windowWidth: 794,
+      scrollY: 0
+    },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
-  html2pdf().set(opt).from(element).save().then(() => {
+
+  html2pdf().set(opt).from(docEl).save().then(() => {
+    // Restore original styles
+    docEl.setAttribute('style', origStyle);
     noprint.forEach(el => el.style.display = '');
   });
+}
+
+// ====== NOTES LINE LIMIT ======
+function limitNoteLines(el) {
+  const MAX = 5;
+  const lines = el.value.split('\n');
+  if (lines.length > MAX) {
+    el.value = lines.slice(0, MAX).join('\n');
+  }
+  const count = el.value === '' ? 0 : el.value.split('\n').length;
+  const counter = document.getElementById('notes-counter');
+  counter.textContent = count + ' / ' + MAX + ' บรรทัด';
+  counter.classList.toggle('warn', count >= MAX);
 }
 
 // ====== INIT ======
